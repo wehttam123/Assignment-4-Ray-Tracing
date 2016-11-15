@@ -98,58 +98,66 @@ struct MyGeometry
 	{}
 };
 
-// create buffers and fill with geometry data, returning true if successful
-bool InitializeGeometry(MyGeometry *geometry)
+struct ray
 {
-	// three vertex positions and assocated colours of a triangle
-	const GLfloat vertices[][2] = {
-		{ -.6f, -.4f },
-                { 0, .6f },
-		{ .6f, -.4f }
-	};
+	// OpenGL names for array buffer objects, vertex array object
+	vector<float> position;
+	vector<float> direction;
+} rays[409600];
 
-	const GLfloat colours[][3] = {
-		{ 1.0f, 0.0f, 0.0f },
-		{ 0.0f, 1.0f, 0.0f },
-		{ 0.0f, 0.0f, 1.0f }
-	};
-	geometry->elementCount = 3;
+void GeneratePoint(MyGeometry *geometry, MyShader *shader, vector <vector<GLfloat>> & coordinates, vector<vector <GLfloat>> & colour)
+{
+		GLfloat vertices[409600][2];
+		for (int i = 0; i < 409600; i++) {
+			vertices[i][0] = coordinates.at(i).at(0);
+			vertices[i][1] = coordinates.at(i).at(1);
+		}
 
-	// these vertex attribute indices correspond to those specified for the
-	// input variables in the vertex shader
-	const GLuint VERTEX_INDEX = 0;
-	const GLuint COLOUR_INDEX = 1;
+		GLfloat colours[409600][3];
+		for (int i = 0; i < 409600; i++) {
+			colours[i][0] = colour.at(i).at(0);
+			colours[i][1] = colour.at(i).at(1);
+			colours[i][2] = colour.at(i).at(2);
+		}
 
-	// create an array buffer object for storing our vertices
-	glGenBuffers(1, &geometry->vertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, geometry->vertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    geometry->elementCount = 409600;
 
-	// create another one for storing our colours
-	glGenBuffers(1, &geometry->colourBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, geometry->colourBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(colours), colours, GL_STATIC_DRAW);
+    // these vertex attribute indices correspond to those specified for the
+    // input variables in the vertex shader
 
-	// create a vertex array object encapsulating all our vertex attributes
-	glGenVertexArrays(1, &geometry->vertexArray);
-	glBindVertexArray(geometry->vertexArray);
+    const GLuint VERTEX_INDEX = 0;
+    const GLuint COLOUR_INDEX = 1;
 
-	// associate the position array with the vertex array object
-	glBindBuffer(GL_ARRAY_BUFFER, geometry->vertexBuffer);
-	glVertexAttribPointer(VERTEX_INDEX, 2, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(VERTEX_INDEX);
+    // create an array buffer object for storing our vertices
+    glGenBuffers(1, &geometry->vertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, geometry->vertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	// assocaite the colour array with the vertex array object
-	glBindBuffer(GL_ARRAY_BUFFER, geometry->colourBuffer);
-	glVertexAttribPointer(COLOUR_INDEX, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(COLOUR_INDEX);
+    // create another one for storing our colours
+    glGenBuffers(1, &geometry->colourBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, geometry->colourBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(colours), colours, GL_STATIC_DRAW);
 
-	// unbind our buffers, resetting to default state
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
+    // create a vertex array object encapsulating all our vertex attributes
+    glGenVertexArrays(1, &geometry->vertexArray);
+    glBindVertexArray(geometry->vertexArray);
 
-	// check for OpenGL errors and return false if error occurred
-	return !CheckGLErrors();
+    // associate the position array with the vertex array object
+    glBindBuffer(GL_ARRAY_BUFFER, geometry->vertexBuffer);
+    glVertexAttribPointer(VERTEX_INDEX, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(VERTEX_INDEX);
+
+    // assocaite the colour array with the vertex array object
+    glBindBuffer(GL_ARRAY_BUFFER, geometry->colourBuffer);
+    glVertexAttribPointer(COLOUR_INDEX, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(COLOUR_INDEX);
+
+    // unbind our buffers, resetting to default state
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    // check for OpenGL errors and return false if error occurred
+    CheckGLErrors();
 }
 
 // deallocate geometry-related objects
@@ -168,14 +176,14 @@ void DestroyGeometry(MyGeometry *geometry)
 void RenderScene(MyGeometry *geometry, MyShader *shader)
 {
 	// clear screen to a dark grey colour
-	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	//glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+	//glClear(GL_COLOR_BUFFER_BIT);
 
 	// bind our shader program and the vertex array object containing our
 	// scene geometry, then tell OpenGL to draw our geometry
 	glUseProgram(shader->program);
 	glBindVertexArray(geometry->vertexArray);
-	glDrawArrays(GL_TRIANGLES, 0, geometry->elementCount);
+	glDrawArrays(GL_POINTS, 0, geometry->elementCount);
 
 	// reset state to default (no shader or geometry bound)
 	glBindVertexArray(0);
@@ -220,7 +228,7 @@ int main(int argc, char *argv[])
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	window = glfwCreateWindow(1024, 768, "CPSC 453 OpenGL Boilerplate", 0, 0);
+	window = glfwCreateWindow(640, 640, "Assignment #4: Raytracing", 0, 0);
 	if (!window) {
 		cout << "Program failed to create GLFW window, TERMINATING" << endl;
 		glfwTerminate();
@@ -252,14 +260,52 @@ int main(int argc, char *argv[])
 
 	// call function to create and fill buffers with geometry data
 	MyGeometry geometry;
-	if (!InitializeGeometry(&geometry))
-		cout << "Program failed to intialize geometry!" << endl;
+//	if (!InitializeGeometry(&geometry))
+	//	cout << "Program failed to intialize geometry!" << endl;
+
+		std::vector<vector<GLfloat>> vertices;
+		vertices.resize(409600, vector<GLfloat>(2, 0.0));
+
+		std::vector<vector<GLfloat>> colours;
+		colours.resize(409600, vector<GLfloat>(3, 0.0));
+
+		//std::vector<ray> rays (409600);
+
+		int width = 640.0;
+		int height = 640.0;
 
 	// run an event-triggered main loop
 	while (!glfwWindowShouldClose(window))
 	{
 		glfwSwapBuffers(window);
 		glfwPollEvents();
+
+		float row = -1;
+		float col = -1;
+		int PixelCount = 0;
+
+		for (float i = 0; i < height; i++) {
+			for (float j = 0; j < width; j++) {
+				row = (2*(j/width))-1;
+
+				//rays[PixelCount] = new struct <ray>;
+				//rays.push_back(ray());
+				//rays.at(0).position.at(0) = 0.0f;
+				//rays.at(PixelCount).position.at(1) = 0.0;
+			//	rays.at(PixelCount).direction.at(0) = 0.0;
+			//	rays.at(PixelCount).direction.at(1) = 0.0;
+
+				vertices.at(PixelCount).at(0) = row;
+				vertices.at(PixelCount).at(1) = col;
+				colours.at(PixelCount).at(0) = row;
+				colours.at(PixelCount).at(1) = col;
+				colours.at(PixelCount).at(2) = 1-row;
+				PixelCount++;
+			}
+			col = (2*(i/height))-1;
+		}
+		GeneratePoint(&geometry, &shader, vertices, colours);
+		RenderScene(&geometry, &shader);
 	}
 
 	// clean up allocated resources before exit
