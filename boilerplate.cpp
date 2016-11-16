@@ -276,6 +276,16 @@ int main(int argc, char *argv[])
 		vector<float> camera (3, 0);
 		camera[2] = 1.0;
 
+		vector<vector<float>> lights;
+		lights.resize(50, vector<float>(3, 0.0));
+		vector<vector<float>> spheres;
+		spheres.resize(50, vector<float>(4, 0.0));
+		vector<vector<float>> planes;
+		planes.resize(50, vector<float>(6, 0.0));
+		vector<vector<float>> triangles;
+		triangles.resize(50, vector<float>(9, 0.0));
+
+
 		int width = 640.0;
 		int height = 640.0;
 
@@ -314,6 +324,68 @@ int main(int argc, char *argv[])
 		}
 		GeneratePoint(&geometry, &shader, vertices, colours);
 		RenderScene(&geometry, &shader);
+
+		int lightCount = 0;
+		int sphereCount = 0;
+		int planeCount = 0;
+		int triangleCount = 0;
+
+				ifstream File;
+				File.open("scene1.txt");
+				if (File.is_open()){
+		    string word;
+		    while (File >> word)
+		    {
+		        //cout << word << '\n';
+						if (word == "light") {
+							File >> word;
+							if (word == "{"){
+							File >> word;
+							if (word != "x"){
+								lights.at(lightCount).at(0) = (float)atof(word.c_str());
+								File >> word; lights.at(lightCount).at(1) = (float)atof(word.c_str());
+								File >> word; lights.at(lightCount).at(2) = (float)atof(word.c_str());
+								lightCount++;}}
+						} else if (word == "sphere") {
+							File >> word;
+							if (word == "{"){
+							File >> word;
+							if (word != "x"){
+								spheres.at(sphereCount).at(0) = (float)atof(word.c_str());
+								File >> word; spheres.at(sphereCount).at(1) = (float)atof(word.c_str());
+								File >> word; spheres.at(sphereCount).at(2) = (float)atof(word.c_str());
+								File >> word; spheres.at(sphereCount).at(3) = (float)atof(word.c_str());
+								sphereCount++;}}
+						} else if (word == "plane"){
+							File >> word;
+							if (word == "{"){
+							File >> word;
+							if (word != "xn"){
+								planes.at(planeCount).at(0) = (float)atof(word.c_str());
+								File >> word; planes.at(planeCount).at(1) = (float)atof(word.c_str());
+								File >> word; planes.at(planeCount).at(2) = (float)atof(word.c_str());
+								File >> word; planes.at(planeCount).at(3) = (float)atof(word.c_str());
+								File >> word; planes.at(planeCount).at(4) = (float)atof(word.c_str());
+								File >> word; planes.at(planeCount).at(5) = (float)atof(word.c_str());
+								planeCount++;}}
+						}else if (word == "triangle"){
+							File >> word;
+							if (word == "{"){
+							File >> word;
+							if (word != "x1"){
+								triangles.at(triangleCount).at(0) = (float)atof(word.c_str());
+								File >> word; triangles.at(triangleCount).at(1) = (float)atof(word.c_str());
+								File >> word; triangles.at(triangleCount).at(2) = (float)atof(word.c_str());
+								File >> word; triangles.at(triangleCount).at(3) = (float)atof(word.c_str());
+								File >> word; triangles.at(triangleCount).at(4) = (float)atof(word.c_str());
+								File >> word; triangles.at(triangleCount).at(5) = (float)atof(word.c_str());
+								File >> word; triangles.at(triangleCount).at(6) = (float)atof(word.c_str());
+								File >> word; triangles.at(triangleCount).at(7) = (float)atof(word.c_str());
+								File >> word; triangles.at(triangleCount).at(8) = (float)atof(word.c_str());
+								triangleCount++;}}
+						}
+		    }}
+		File.close();
 	}
 
 	// clean up allocated resources before exit
