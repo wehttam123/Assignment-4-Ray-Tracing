@@ -103,7 +103,7 @@ struct ray
 	// OpenGL names for array buffer objects, vertex array object
 	vector<float> position;
 	vector<float> direction;
-} rays[409600];
+};
 
 void GeneratePoint(MyGeometry *geometry, MyShader *shader, vector <vector<GLfloat>> & coordinates, vector<vector <GLfloat>> & colour)
 {
@@ -263,13 +263,18 @@ int main(int argc, char *argv[])
 //	if (!InitializeGeometry(&geometry))
 	//	cout << "Program failed to intialize geometry!" << endl;
 
-		std::vector<vector<GLfloat>> vertices;
+		vector<vector<GLfloat>> vertices;
 		vertices.resize(409600, vector<GLfloat>(2, 0.0));
 
-		std::vector<vector<GLfloat>> colours;
+		vector<vector<GLfloat>> colours;
 		colours.resize(409600, vector<GLfloat>(3, 0.0));
 
-		//std::vector<ray> rays (409600);
+		vector<ray> rays (409600);
+		vector<float> position (2, 0);
+		vector<float> direction (3, 0);
+
+		vector<float> camera (3, 0);
+		camera[2] = 1.0;
 
 		int width = 640.0;
 		int height = 640.0;
@@ -289,17 +294,20 @@ int main(int argc, char *argv[])
 				row = (2*(j/width))-1;
 
 				//rays[PixelCount] = new struct <ray>;
-				//rays.push_back(ray());
-				//rays.at(0).position.at(0) = 0.0f;
-				//rays.at(PixelCount).position.at(1) = 0.0;
-			//	rays.at(PixelCount).direction.at(0) = 0.0;
-			//	rays.at(PixelCount).direction.at(1) = 0.0;
+				rays.push_back(ray());
+
+				position[0] = row; position[1] = col;
+				rays[PixelCount].position = position;
+
+				direction[0] = row/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(1.0, 2.0)); direction[1] = col/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(1.0, 2.0)); direction[2] = 1.0/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(1.0, 2.0));
+				rays[PixelCount].direction = direction;
 
 				vertices.at(PixelCount).at(0) = row;
 				vertices.at(PixelCount).at(1) = col;
-				colours.at(PixelCount).at(0) = row;
-				colours.at(PixelCount).at(1) = col;
-				colours.at(PixelCount).at(2) = 1-row;
+				colours.at(PixelCount).at(0) = rays[PixelCount].direction[0];
+				//std::cout << "dir " << rays[PixelCount].direction[0] << std::endl;
+				colours.at(PixelCount).at(1) = rays[PixelCount].direction[1];
+				colours.at(PixelCount).at(2) = rays[PixelCount].direction[2];
 				PixelCount++;
 			}
 			col = (2*(i/height))-1;
