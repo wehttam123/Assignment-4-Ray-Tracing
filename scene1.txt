@@ -35,6 +35,11 @@ sphere {
   0.825
 }
 
+sphere {
+0.0 0.0 0.0
+  1.0
+}
+
 # Blue pyramid
 triangle {
   -0.4 -2.75 -9.55

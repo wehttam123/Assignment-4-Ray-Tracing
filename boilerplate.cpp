@@ -295,6 +295,8 @@ int main(int argc, char *argv[])
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
+		//ray generation
+
 		float row = -1;
 		float col = -1;
 		int PixelCount = 0;
@@ -324,6 +326,8 @@ int main(int argc, char *argv[])
 		}
 		GeneratePoint(&geometry, &shader, vertices, colours);
 		RenderScene(&geometry, &shader);
+
+		//read from file
 
 		int lightCount = 0;
 		int sphereCount = 0;
@@ -385,6 +389,39 @@ int main(int argc, char *argv[])
 								triangleCount++;}}
 						}
 		    }}
+
+				//intersection
+				float proj = 0;
+				vector<float> projecton (3,0);
+				for (int i = 0; i < sphereCount; i++) {
+					for (int j = 0; j < 409600; j++){
+						proj = ((spheres.at(i).at(0)*rays[j].direction[0])+(spheres.at(i).at(1)*rays[j].direction[1])+(spheres.at(i).at(2)*rays[j].direction[2]))/
+
+						(pow((pow(rays[j].direction[0], 2.0)+pow(rays[j].direction[1], 2.0)+pow(rays[j].direction[2], 2.0)), 2.0 ));
+						projecton[0] = proj*rays[j].direction[0];
+						projecton[1] = proj*rays[j].direction[1];
+						projecton[2] = proj*rays[j].direction[2];
+						proj = sqrt(pow(rays[j].direction[0]-projecton[0], 2.0)+pow(rays[j].direction[1]-projecton[1], 2.0)+pow(rays[j].direction[2]-projecton[2], 2.0));
+						if (proj < 0) {proj = proj * -1;}
+						//cout << proj << endl;
+						if (proj <= (float)spheres.at(i).at(3)) {
+							//cout << "intersection " << i << " " << j << endl;
+							//colours.at(j).at(0) = 0.5;
+							//colours.at(j).at(1) = 0.5;
+							//colours.at(j).at(2) = 0.5;
+						} else {/*cout << "no" << endl;*/}
+					}
+				}
+
+				/*for (int i = 0; i < triangleCount; i++) {
+					for (int j = 0; j < 409600; j++){
+
+					}
+				}*/
+
+				GeneratePoint(&geometry, &shader, vertices, colours);
+				RenderScene(&geometry, &shader);
+
 		File.close();
 	}
 
