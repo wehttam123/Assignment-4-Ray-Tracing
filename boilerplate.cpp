@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
 		vector<float> direction (3, 0);
 
 		vector<float> camera (3, 0);
-		camera[2] = 1.0;
+		camera[2] = -640.0;
 
 		vector<vector<float>> lights;
 		lights.resize(50, vector<float>(3, 0.0));
@@ -311,15 +311,15 @@ int main(int argc, char *argv[])
 				position[0] = row; position[1] = col;
 				rays[PixelCount].position = position;
 
-				direction[0] = row/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(1.0, 2.0)); direction[1] = col/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(1.0, 2.0)); direction[2] = 1.0/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(1.0, 2.0));
+				direction[0] = (row/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(-2.0, 2.0))+camera[0]); direction[1] = (col/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(-2.0, 2.0)))+camera[1]; direction[2] = -2.0/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(2.0, -2.0));
 				rays[PixelCount].direction = direction;
 
 				vertices.at(PixelCount).at(0) = row;
 				vertices.at(PixelCount).at(1) = col;
 				colours.at(PixelCount).at(0) = rays[PixelCount].direction[0];
-				//std::cout << "dir " << rays[PixelCount].direction[0] << std::endl;
+				//std::cout << "dir " << rays[PixelCount].direction[0] << "dir " << rays[PixelCount].direction[1] << " " << rays[PixelCount].direction[2] << std::endl;
 				colours.at(PixelCount).at(1) = rays[PixelCount].direction[1];
-				colours.at(PixelCount).at(2) = rays[PixelCount].direction[2];
+				//colours.at(PixelCount).at(2) = rays[PixelCount].direction[2];
 				PixelCount++;
 			}
 			col = (2*(i/height))-1;
@@ -393,22 +393,26 @@ int main(int argc, char *argv[])
 				//intersection
 				float proj = 0;
 				vector<float> projecton (3,0);
-				for (int i = 0; i < sphereCount; i++) {
-					for (int j = 0; j < 409600; j++){
-						proj = ((spheres.at(i).at(0)*rays[j].direction[0])+(spheres.at(i).at(1)*rays[j].direction[1])+(spheres.at(i).at(2)*rays[j].direction[2]))/
-
+				for (int i = 0; i < 1/*sphereCount*/; i++) {
+					for (int j = 0; j < 1/*409600*/; j++){
+						proj = ( (spheres.at(i).at(0) * rays[j].direction[0])
+						+ (spheres.at(i).at(1) * rays[j].direction[1])
+						+ (spheres.at(i).at(2) * rays[j].direction[2]) )/
 						(pow((pow(rays[j].direction[0], 2.0)+pow(rays[j].direction[1], 2.0)+pow(rays[j].direction[2], 2.0)), 2.0 ));
+						//cout << proj << endl;
+
+
 						projecton[0] = proj*rays[j].direction[0];
 						projecton[1] = proj*rays[j].direction[1];
 						projecton[2] = proj*rays[j].direction[2];
 						proj = sqrt(pow(rays[j].direction[0]-projecton[0], 2.0)+pow(rays[j].direction[1]-projecton[1], 2.0)+pow(rays[j].direction[2]-projecton[2], 2.0));
 						if (proj < 0) {proj = proj * -1;}
-						//cout << proj << endl;
+						cout << proj << endl;
 						if (proj <= (float)spheres.at(i).at(3)) {
 							//cout << "intersection " << i << " " << j << endl;
-							//colours.at(j).at(0) = 0.5;
-							//colours.at(j).at(1) = 0.5;
-							//colours.at(j).at(2) = 0.5;
+							colours.at(j).at(0) = 0.5;
+							colours.at(j).at(1) = 0.5;
+							colours.at(j).at(2) = 0.5;
 						} else {/*cout << "no" << endl;*/}
 					}
 				}
