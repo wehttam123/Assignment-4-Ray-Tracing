@@ -31,13 +31,8 @@ light {
 
 # Reflective grey sphere shape
 sphere {
-  0.9 -1.925 -6.69
+  0.9 -1.925 -4.69
   0.825
-}
-
-sphere {
-0.0 0.0 50.0
-  0.01
 }
 
 # Blue pyramid

@@ -103,6 +103,7 @@ struct ray
 	// OpenGL names for array buffer objects, vertex array object
 	vector<float> position;
 	vector<float> direction;
+	vector<float> intersection;
 };
 
 void GeneratePoint(MyGeometry *geometry, MyShader *shader, vector <vector<GLfloat>> & coordinates, vector<vector <GLfloat>> & colour)
@@ -272,6 +273,7 @@ int main(int argc, char *argv[])
 		vector<ray> rays (409600);
 		vector<float> position (2, 0);
 		vector<float> direction (3, 0);
+		vector<float> intersection (1, 0.0);
 
 		vector<float> camera (3, 0);
 		camera[2] = -640.0;
@@ -311,14 +313,17 @@ int main(int argc, char *argv[])
 				position[0] = row; position[1] = col;
 				rays[PixelCount].position = position;
 
-				direction[0] = (row/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(-2.0, 2.0))+camera[0]); direction[1] = (col/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(-2.0, 2.0)))+camera[1]; direction[2] = -2.0/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(2.0, -2.0));
+				direction[0] = row; /*(row/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(-2.0, 2.0))+camera[0]);*/direction[1] = col; /*(col/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(-2.0, 2.0)))+camera[1];*/ direction[2] = -2; /*-2.0/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(2.0, -2.0));*/
 				rays[PixelCount].direction = direction;
+
+				intersection[0] = -1.0;
+				rays[PixelCount].intersection = intersection;
 
 				vertices.at(PixelCount).at(0) = row;
 				vertices.at(PixelCount).at(1) = col;
-				colours.at(PixelCount).at(0) = rays[PixelCount].direction[0];
-				//std::cout << "dir " << rays[PixelCount].direction[0] << "dir " << rays[PixelCount].direction[1] << " " << rays[PixelCount].direction[2] << std::endl;
-				colours.at(PixelCount).at(1) = rays[PixelCount].direction[1];
+				//colours.at(PixelCount).at(0) = rays[PixelCount].direction[0];
+				//std::cout << "dir " << rays[PixelCount].direction[0] << " " << rays[PixelCount].direction[1] << " " << rays[PixelCount].direction[2] << std::endl;
+				//colours.at(PixelCount).at(1) = rays[PixelCount].direction[1];
 				//colours.at(PixelCount).at(2) = rays[PixelCount].direction[2];
 				PixelCount++;
 			}
@@ -391,37 +396,158 @@ int main(int argc, char *argv[])
 		    }}
 
 				//intersection
+
+				//sphere intersection
 				float proj = 0;
 				vector<float> projecton (3,0);
-				for (int i = 0; i < 1/*sphereCount*/; i++) {
-					for (int j = 0; j < 1/*409600*/; j++){
+				for (int i = 0; i < sphereCount; i++) {
+					for (int j = 0; j < 409600; j++){
 						proj = ( (spheres.at(i).at(0) * rays[j].direction[0])
 						+ (spheres.at(i).at(1) * rays[j].direction[1])
 						+ (spheres.at(i).at(2) * rays[j].direction[2]) )/
 						(pow((pow(rays[j].direction[0], 2.0)+pow(rays[j].direction[1], 2.0)+pow(rays[j].direction[2], 2.0)), 2.0 ));
-						//cout << proj << endl;
-
-
 						projecton[0] = proj*rays[j].direction[0];
 						projecton[1] = proj*rays[j].direction[1];
 						projecton[2] = proj*rays[j].direction[2];
 						proj = sqrt(pow(rays[j].direction[0]-projecton[0], 2.0)+pow(rays[j].direction[1]-projecton[1], 2.0)+pow(rays[j].direction[2]-projecton[2], 2.0));
 						if (proj < 0) {proj = proj * -1;}
-						cout << proj << endl;
 						if (proj <= (float)spheres.at(i).at(3)) {
-							//cout << "intersection " << i << " " << j << endl;
-							colours.at(j).at(0) = 0.5;
-							colours.at(j).at(1) = 0.5;
-							colours.at(j).at(2) = 0.5;
-						} else {/*cout << "no" << endl;*/}
+							if (rays[j].intersection[0] == -1.0){
+								rays[j].intersection[0] = proj;
+							} else if(rays[j].intersection[0] > proj){
+								rays[j].intersection[0] = proj;
+							}
+
+							if(rays[j].intersection[0] == proj){
+								colours.at(j).at(0) = 0.5;
+								colours.at(j).at(1) = 0.5;
+								colours.at(j).at(2) = 0.5;
+							}
+						}
 					}
 				}
 
-				/*for (int i = 0; i < triangleCount; i++) {
+				//triangle intersection
+				float t = 0.0;
+				float u = 0.0;
+				float v = 0.0;
+
+				float a = 0.0; float b = 0.0; float c = 0.0;
+				float d = 0.0; float e = 0.0; float f = 0.0;
+				float g = 0.0; float h = 0.0; float k = 0.0;
+
+				//a(ei - fh) - b(di - fg) + c(dh - eg)
+
+				for (int i = 0; i < triangleCount; i++) {
 					for (int j = 0; j < 409600; j++){
+						//p + t * d = (1-u-v) * p0 + u * p1 + v * p2
+						a = -triangles.at(i).at(0); b = triangles.at(i).at(3) - triangles.at(i).at(0); c = triangles.at(i).at(6) - triangles.at(i).at(0);
+						d = -triangles.at(i).at(1); e = triangles.at(i).at(4) - triangles.at(i).at(1); f = triangles.at(i).at(7) - triangles.at(i).at(1);
+						g = -triangles.at(i).at(2); h = triangles.at(i).at(5) - triangles.at(i).at(2); k = triangles.at(i).at(8) - triangles.at(i).at(2);
+
+						t = a*((e*k) - (f*h)) - b*((d*k) - (f*g)) + c*((d*h) - (e*g));
+
+						a = -rays[j].direction[0]; b = triangles.at(i).at(3) - triangles.at(i).at(0); c = triangles.at(i).at(6) - triangles.at(i).at(0);
+						d = -rays[j].direction[1]; e = triangles.at(i).at(4) - triangles.at(i).at(1); f = triangles.at(i).at(7) - triangles.at(i).at(1);
+						g = -rays[j].direction[2]; h = triangles.at(i).at(5) - triangles.at(i).at(2); k = triangles.at(i).at(8) - triangles.at(i).at(2);
+
+						t = t/(a*((e*k) - (f*h)) - b*((d*k) - (f*g)) + c*((d*h) - (e*g)));
+
+
+						a = -rays[j].direction[0]; b = -triangles.at(i).at(0); c = triangles.at(i).at(6) - triangles.at(i).at(0);
+						d = -rays[j].direction[1]; e = -triangles.at(i).at(1); f = triangles.at(i).at(7) - triangles.at(i).at(1);
+						g = -rays[j].direction[2]; h = -triangles.at(i).at(2); k = triangles.at(i).at(8) - triangles.at(i).at(2);
+						u = a*((e*k) - (f*h)) - b*((d*k) - (f*g)) + c*((d*h) - (e*g));
+
+						a = -rays[j].direction[0]; b = triangles.at(i).at(3) - triangles.at(i).at(0); c = triangles.at(i).at(6) - triangles.at(i).at(0);
+						d = -rays[j].direction[1]; e = triangles.at(i).at(4) - triangles.at(i).at(1); f = triangles.at(i).at(7) - triangles.at(i).at(1);
+						g = -rays[j].direction[2]; h = triangles.at(i).at(5) - triangles.at(i).at(2); k = triangles.at(i).at(8) - triangles.at(i).at(2);
+
+						u = u/(a*((e*k) - (f*h)) - b*((d*k) - (f*g)) + c*((d*h) - (e*g)));
+
+
+						a = -rays[j].direction[0]; b = triangles.at(i).at(3) - triangles.at(i).at(0); c = -triangles.at(i).at(0);
+						d = -rays[j].direction[1]; e = triangles.at(i).at(4) - triangles.at(i).at(1); f = -triangles.at(i).at(1);
+						g = -rays[j].direction[2]; h = triangles.at(i).at(5) - triangles.at(i).at(2); k = -triangles.at(i).at(2);
+						v = a*((e*k) - (f*h)) - b*((d*k) - (f*g)) + c*((d*h) - (e*g));
+
+						a = -rays[j].direction[0]; b = triangles.at(i).at(3) - triangles.at(i).at(0); c = triangles.at(i).at(6) - triangles.at(i).at(0);
+						d = -rays[j].direction[1]; e = triangles.at(i).at(4) - triangles.at(i).at(1); f = triangles.at(i).at(7) - triangles.at(i).at(1);
+						g = -rays[j].direction[2]; h = triangles.at(i).at(5) - triangles.at(i).at(2); k = triangles.at(i).at(8) - triangles.at(i).at(2);
+
+						v = v/(a*((e*k) - (f*h)) - b*((d*k) - (f*g)) + c*((d*h) - (e*g)));
+
+						if(u >= 0){
+							if(v >= 0){
+								if(u+v <= 1.0){
+
+									if (rays[j].intersection[0] == -1.0){
+										rays[j].intersection[0] = t;
+									} else if(rays[j].intersection[0] > t){
+										rays[j].intersection[0] = t;
+									}
+
+									if(i >= 0){
+										if(i < 4){
+											if(rays[j].intersection[0] == t){
+												colours.at(j).at(0) = 0.0;
+												colours.at(j).at(1) = 0.0;
+												colours.at(j).at(2) = 1.0;
+											}
+										} else if(i < 6){
+											if(rays[j].intersection[0] == t){
+												colours.at(j).at(0) = 1.0;
+												colours.at(j).at(1) = 1.0;
+												colours.at(j).at(2) = 1.0;
+											}
+										} else if(i < 8){
+											if(rays[j].intersection[0] == t){
+												colours.at(j).at(0) = 0.0;
+												colours.at(j).at(1) = 1.0;
+												colours.at(j).at(2) = 0.0;
+											}
+										} else if(i < 10){
+											if(rays[j].intersection[0] == t){
+												colours.at(j).at(0) = 1.0;
+												colours.at(j).at(1) = 0.0;
+												colours.at(j).at(2) = 0.0;
+											}
+										} else if(i < 12){
+											if(rays[j].intersection[0] == t){
+												colours.at(j).at(0) = 0.5;
+												colours.at(j).at(1) = 0.5;
+												colours.at(j).at(2) = 0.5;
+											}
+										}
+									}
+								}
+							}
+						}
 
 					}
-				}*/
+				}
+
+				//plane intersection
+
+				t = 0.0;
+				for (int i = 0; i < planeCount; i++) {
+					for (int j = 0; j < 409600; j++){
+						t = ((planes.at(i).at(3) * planes.at(i).at(0)) + (planes.at(i).at(4) * planes.at(i).at(1)) + (planes.at(i).at(5) * planes.at(i).at(2)))/
+						((rays[j].direction[0] * planes.at(i).at(0)) + (rays[j].direction[1] * planes.at(i).at(1)) + (rays[j].direction[2] * planes.at(i).at(2)));
+
+						if (rays[j].intersection[0] == -1.0){
+							rays[j].intersection[0] = t;
+						} else if(rays[j].intersection[0] > t){
+							rays[j].intersection[0] = t;
+						}
+
+						if(rays[j].intersection[0] == t){
+							colours.at(j).at(0) = 0.7;
+							colours.at(j).at(1) = 0.7;
+							colours.at(j).at(2) = 0.7;
+						}
+					}
+				}
 
 				GeneratePoint(&geometry, &shader, vertices, colours);
 				RenderScene(&geometry, &shader);
