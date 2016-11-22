@@ -8,6 +8,8 @@
 //
 // Author:  Sonny Chan, University of Calgary
 // Date:    December 2015
+// Edited:  Matthew hylton (10114326)
+//
 // ==========================================================================
 
 #include <iostream>
@@ -100,7 +102,6 @@ struct MyGeometry
 
 struct ray
 {
-	// OpenGL names for array buffer objects, vertex array object
 	vector<float> position;
 	vector<float> direction;
 	vector<float> intersection;
@@ -263,6 +264,8 @@ int main(int argc, char *argv[])
 	MyGeometry geometry;
 //	if (!InitializeGeometry(&geometry))
 	//	cout << "Program failed to intialize geometry!" << endl;
+	ImageBuffer Image;
+	Image.Initialize();
 
 		vector<vector<GLfloat>> vertices;
 		vertices.resize(409600, vector<GLfloat>(2, 0.0));
@@ -273,7 +276,7 @@ int main(int argc, char *argv[])
 		vector<ray> rays (409600);
 		vector<float> position (2, 0);
 		vector<float> direction (3, 0);
-		vector<float> intersection (1, 0.0);
+		vector<float> intersection (4, 0.0);
 
 		vector<float> camera (3, 0);
 		camera[2] = -640.0;
@@ -291,11 +294,18 @@ int main(int argc, char *argv[])
 		int width = 640.0;
 		int height = 640.0;
 
+		int scene = 1;
+
 	// run an event-triggered main loop
 	while (!glfwWindowShouldClose(window))
 	{
 		glfwSwapBuffers(window);
 		glfwPollEvents();
+
+		cout << "Choose a scene(1,2,3): ";
+		cin >> scene;
+		cout << "rendering..." << endl;
+
 
 		//ray generation
 
@@ -313,7 +323,7 @@ int main(int argc, char *argv[])
 				position[0] = row; position[1] = col;
 				rays[PixelCount].position = position;
 
-				direction[0] = row; /*(row/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(-2.0, 2.0))+camera[0]);*/direction[1] = col; /*(col/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(-2.0, 2.0)))+camera[1];*/ direction[2] = -2; /*-2.0/sqrt(pow(row, 2.0)+pow(col, 2.0)+pow(2.0, -2.0));*/
+				direction[0] = row; direction[1] = col; direction[2] = -2;
 				rays[PixelCount].direction = direction;
 
 				intersection[0] = -1.0;
@@ -321,16 +331,10 @@ int main(int argc, char *argv[])
 
 				vertices.at(PixelCount).at(0) = row;
 				vertices.at(PixelCount).at(1) = col;
-				//colours.at(PixelCount).at(0) = rays[PixelCount].direction[0];
-				//std::cout << "dir " << rays[PixelCount].direction[0] << " " << rays[PixelCount].direction[1] << " " << rays[PixelCount].direction[2] << std::endl;
-				//colours.at(PixelCount).at(1) = rays[PixelCount].direction[1];
-				//colours.at(PixelCount).at(2) = rays[PixelCount].direction[2];
 				PixelCount++;
 			}
 			col = (2*(i/height))-1;
 		}
-		GeneratePoint(&geometry, &shader, vertices, colours);
-		RenderScene(&geometry, &shader);
 
 		//read from file
 
@@ -339,13 +343,25 @@ int main(int argc, char *argv[])
 		int planeCount = 0;
 		int triangleCount = 0;
 
+		string s;
+		switch (scene) {
+			case 1:
+			s = "scene1.txt";
+			break;
+			case 2:
+			s = "scene2.txt";
+			break;
+			case 3:
+			s = "scene3.txt";
+			break;
+		}
+
 				ifstream File;
-				File.open("scene1.txt");
+				File.open(s);
 				if (File.is_open()){
 		    string word;
 		    while (File >> word)
 		    {
-		        //cout << word << '\n';
 						if (word == "light") {
 							File >> word;
 							if (word == "{"){
@@ -398,36 +414,109 @@ int main(int argc, char *argv[])
 				//intersection
 
 				//sphere intersection
+				cout << "spheres" << endl;
+
+				float normalx = 0.0; float normaly = 0.0; float normalz = 0.0;
+				float nx = 0.0; float ny = 0.0; float nz = 0.0;
+				float ix = 0.0; float iy = 0.0; float iz = 0.0;
+				float nix = 0.0; float niy = 0.0; float niz = 0.0;
+				float hx = 0.0; float hy = 0.0; float hz = 0.0;
+
+				float scale = 0.0;
+				float dot = 0.0;
+				float dot2 = 0.0;
+
 				float proj = 0;
 				vector<float> projecton (3,0);
 				for (int i = 0; i < sphereCount; i++) {
 					for (int j = 0; j < 409600; j++){
+
 						proj = ( (spheres.at(i).at(0) * rays[j].direction[0])
 						+ (spheres.at(i).at(1) * rays[j].direction[1])
 						+ (spheres.at(i).at(2) * rays[j].direction[2]) )/
 						(pow((pow(rays[j].direction[0], 2.0)+pow(rays[j].direction[1], 2.0)+pow(rays[j].direction[2], 2.0)), 2.0 ));
+
 						projecton[0] = proj*rays[j].direction[0];
 						projecton[1] = proj*rays[j].direction[1];
 						projecton[2] = proj*rays[j].direction[2];
 						proj = sqrt(pow(rays[j].direction[0]-projecton[0], 2.0)+pow(rays[j].direction[1]-projecton[1], 2.0)+pow(rays[j].direction[2]-projecton[2], 2.0));
+
+						//unflatten sphere attempt
+						//proj = proj - sqrt( pow(spheres.at(i).at(3),2.0) - pow(sqrt(pow((projecton[0] - spheres.at(i).at(0)),2.0) + pow((projecton[1] - spheres.at(i).at(1)),2.0) + pow((projecton[2] - spheres.at(i).at(2)),2.0)), 2.0) );
+
 						if (proj < 0) {proj = proj * -1;}
+
+						scale = sqrt(pow(rays[j].direction[0],2) + pow(rays[j].direction[1],2) + pow(rays[j].direction[2],2)) - proj;
+						ix = rays[j].direction[0] - scale; iy = rays[j].direction[1] - scale; iz = rays[j].direction[2] - scale;
+
+						normalx = ix - spheres.at(i).at(0);
+						normaly	=	iy - spheres.at(i).at(1);
+						normalz	= iz - spheres.at(i).at(2);
+
+						nx = normalx/sqrt(pow(normalx,2) + pow(normaly,2) + pow(normalz,2));
+						ny = normaly/sqrt(pow(normalx,2) + pow(normaly,2) + pow(normalz,2));
+						nz = normalz/sqrt(pow(normalx,2) + pow(normaly,2) + pow(normalz,2));
+
+						ix = lights.at(0).at(0) - ix; iy = lights.at(0).at(1) - iy; iz = lights.at(0).at(2) - iz;
+
+						nix = ix/sqrt(pow(ix,2) + pow(iy,2) + pow(iz,2));
+						niy = iy/sqrt(pow(ix,2) + pow(iy,2) + pow(iz,2));
+						niz = iz/sqrt(pow(ix,2) + pow(iy,2) + pow(iz,2));
+
+						dot = -((nx * nix) + (ny * niy) + (nz * niz));
+
+						hx = (lights.at(0).at(0))/sqrt(pow(lights.at(0).at(0),2) + pow(lights.at(0).at(1),2) + pow((lights.at(0).at(2)),2));
+						hy = (lights.at(0).at(1))/sqrt(pow(lights.at(0).at(0),2) + pow(lights.at(0).at(1),2) + pow((lights.at(0).at(2)),2));
+						hz = (lights.at(0).at(2))/sqrt(pow(lights.at(0).at(0),2) + pow(lights.at(0).at(1),2) + pow((lights.at(0).at(2)),2));
+
+						dot2 = -((nx * hx) + (ny * hy) + (nz * hz));
+
 						if (proj <= (float)spheres.at(i).at(3)) {
 							if (rays[j].intersection[0] == -1.0){
 								rays[j].intersection[0] = proj;
+								rays[j].intersection[1] = ix+lights.at(0).at(0);
+								rays[j].intersection[2] = iy+lights.at(0).at(1);
+								rays[j].intersection[3] = iz+lights.at(0).at(2);
 							} else if(rays[j].intersection[0] > proj){
 								rays[j].intersection[0] = proj;
+								rays[j].intersection[1] = ix+lights.at(0).at(0);
+								rays[j].intersection[2] = iy+lights.at(0).at(1);
+								rays[j].intersection[3] = iz+lights.at(0).at(2);
 							}
 
 							if(rays[j].intersection[0] == proj){
-								colours.at(j).at(0) = 0.5;
-								colours.at(j).at(1) = 0.5;
-								colours.at(j).at(2) = 0.5;
+								if(scene == 1){
+									colours.at(j).at(0) = 0.3*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.3*pow(dot2,10000);
+									colours.at(j).at(1) = 0.3*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.3*pow(dot2,10000);
+									colours.at(j).at(2) = 0.3*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.3*pow(dot2,10000);
+								} else if(scene == 2){
+									if (i == 0){
+										colours.at(j).at(0) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
+										colours.at(j).at(1) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
+										colours.at(j).at(2) = 0.0;
+									} else if (i == 1){
+										colours.at(j).at(0) = 0.7*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.7*pow(dot2,1000);
+										colours.at(j).at(1) = 0.7*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.7*pow(dot2,1000);
+										colours.at(j).at(2) = 0.7*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.7*pow(dot2,1000);
+									} else if (i == 2){
+										colours.at(j).at(0) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
+										colours.at(j).at(1) = 0.0;
+										colours.at(j).at(2) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
+									}
+								} else if(scene == 3){
+									colours.at(j).at(0) = 0.0;
+									colours.at(j).at(1) = 0.7*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.7*pow(dot2,10000);
+									colours.at(j).at(2) = 0.7*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.7*pow(dot2,10000);
+								}
 							}
 						}
 					}
 				}
 
+
 				//triangle intersection
+				cout << "triangles" << endl;
+
 				float t = 0.0;
 				float u = 0.0;
 				float v = 0.0;
@@ -436,7 +525,15 @@ int main(int argc, char *argv[])
 				float d = 0.0; float e = 0.0; float f = 0.0;
 				float g = 0.0; float h = 0.0; float k = 0.0;
 
-				//a(ei - fh) - b(di - fg) + c(dh - eg)
+				 normalx = 0.0;  normaly = 0.0;  normalz = 0.0;
+				 nx = 0.0;  ny = 0.0;  nz = 0.0;
+				 ix = 0.0;  iy = 0.0;  iz = 0.0;
+				 nix = 0.0;  niy = 0.0;  niz = 0.0;
+				 hx = 0.0;  hy = 0.0;  hz = 0.0;
+
+				 scale = 0.0;
+				 dot = 0.0;
+				 dot2 = 0.0;
 
 				for (int i = 0; i < triangleCount; i++) {
 					for (int j = 0; j < 409600; j++){
@@ -477,57 +574,158 @@ int main(int argc, char *argv[])
 
 						v = v/(a*((e*k) - (f*h)) - b*((d*k) - (f*g)) + c*((d*h) - (e*g)));
 
+						normalx = (triangles.at(i).at(4) - triangles.at(i).at(1)) * (triangles.at(i).at(8) - triangles.at(i).at(2)) - (triangles.at(i).at(5) - triangles.at(i).at(2)) * (triangles.at(i).at(7) - triangles.at(i).at(1));
+						normaly	=	(triangles.at(i).at(5) - triangles.at(i).at(2)) * (triangles.at(i).at(6) - triangles.at(i).at(0)) - (triangles.at(i).at(3) - triangles.at(i).at(0)) * (triangles.at(i).at(8) - triangles.at(i).at(2));
+						normalz	= (triangles.at(i).at(3) - triangles.at(i).at(0)) * (triangles.at(i).at(7) - triangles.at(i).at(1)) - (triangles.at(i).at(4) - triangles.at(i).at(1)) * (triangles.at(i).at(6) - triangles.at(i).at(0));
+
+						nx = normalx/sqrt(pow(normalx,2) + pow(normaly,2) + pow(normalz,2));
+						ny = normaly/sqrt(pow(normalx,2) + pow(normaly,2) + pow(normalz,2));
+						nz = normalz/sqrt(pow(normalx,2) + pow(normaly,2) + pow(normalz,2));
+
+						scale = sqrt(pow(rays[j].direction[0],2) + pow(rays[j].direction[1],2) + pow(rays[j].direction[2],2)) - t;
+						ix = rays[j].direction[0] - scale; iy = rays[j].direction[1] - scale; iz = rays[j].direction[2] - scale;
+						ix = lights.at(0).at(0) - ix; iy = lights.at(0).at(1) - iy; iz = lights.at(0).at(2) - iz;
+
+						nix = ix/sqrt(pow(ix,2) + pow(iy,2) + pow(iz,2));
+						niy = iy/sqrt(pow(ix,2) + pow(iy,2) + pow(iz,2));
+						niz = iz/sqrt(pow(ix,2) + pow(iy,2) + pow(iz,2));
+
+						dot = -((nx * nix) + (ny * niy) + (nz * niz));
+
+						hx = (lights.at(0).at(0))/sqrt(pow(lights.at(0).at(0),2) + pow(lights.at(0).at(1),2) + pow((lights.at(0).at(2)),2));
+						hy = (lights.at(0).at(1))/sqrt(pow(lights.at(0).at(0),2) + pow(lights.at(0).at(1),2) + pow((lights.at(0).at(2)),2));
+						hz = (lights.at(0).at(2))/sqrt(pow(lights.at(0).at(0),2) + pow(lights.at(0).at(1),2) + pow((lights.at(0).at(2)),2));
+
+						dot2 = -((nx * hx) + (ny * hy) + (nz * hz));
+
 						if(u >= 0){
 							if(v >= 0){
 								if(u+v <= 1.0){
 
 									if (rays[j].intersection[0] == -1.0){
 										rays[j].intersection[0] = t;
+										rays[j].intersection[1] = ix;
+										rays[j].intersection[2] = iy;
+										rays[j].intersection[3] = iz;
 									} else if(rays[j].intersection[0] > t){
 										rays[j].intersection[0] = t;
+										rays[j].intersection[1] = ix;
+										rays[j].intersection[2] = iy;
+										rays[j].intersection[3] = iz;
 									}
 
+
+									if (scene == 1){
 									if(i >= 0){
 										if(i < 4){
 											if(rays[j].intersection[0] == t){
 												colours.at(j).at(0) = 0.0;
 												colours.at(j).at(1) = 0.0;
-												colours.at(j).at(2) = 1.0;
+												colours.at(j).at(2) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,10);
 											}
 										} else if(i < 6){
 											if(rays[j].intersection[0] == t){
-												colours.at(j).at(0) = 1.0;
-												colours.at(j).at(1) = 1.0;
-												colours.at(j).at(2) = 1.0;
+												colours.at(j).at(0) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
+												colours.at(j).at(1) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
+												colours.at(j).at(2) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
 											}
 										} else if(i < 8){
 											if(rays[j].intersection[0] == t){
 												colours.at(j).at(0) = 0.0;
-												colours.at(j).at(1) = 1.0;
+												colours.at(j).at(1) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
 												colours.at(j).at(2) = 0.0;
 											}
 										} else if(i < 10){
 											if(rays[j].intersection[0] == t){
-												colours.at(j).at(0) = 1.0;
+												colours.at(j).at(0) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
 												colours.at(j).at(1) = 0.0;
 												colours.at(j).at(2) = 0.0;
 											}
 										} else if(i < 12){
 											if(rays[j].intersection[0] == t){
-												colours.at(j).at(0) = 0.5;
-												colours.at(j).at(1) = 0.5;
-												colours.at(j).at(2) = 0.5;
+												colours.at(j).at(0) = 0.5*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.5*pow(dot2,1000);
+												colours.at(j).at(1) = 0.5*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.5*pow(dot2,1000);
+												colours.at(j).at(2) = 0.5*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.5*pow(dot2,1000);
 											}
 										}
 									}
+								} else if(scene == 2){
+									if(i >= 0){
+										if(i < 12){
+											if(rays[j].intersection[0] == t){
+												colours.at(j).at(0) = 0.0;
+												colours.at(j).at(1) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
+												colours.at(j).at(2) = 0.0;
+											}
+										} else if(i < 32){
+											if(rays[j].intersection[0] == t){
+												colours.at(j).at(0) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
+												colours.at(j).at(1) = 0.0;
+												colours.at(j).at(2) = 0.0;
+											}
+										}
+									}
+								} else if(scene == 3){
+									if(i >= 0){
+										if(i < 4){
+											if(rays[j].intersection[0] == t){
+												colours.at(j).at(0) = 0.0;
+												colours.at(j).at(1) = 0.0;
+												colours.at(j).at(2) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,10);
+											}
+										} else if(i < 6){
+											if(rays[j].intersection[0] == t){
+												colours.at(j).at(0) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
+												colours.at(j).at(1) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
+												colours.at(j).at(2) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
+											}
+										} else if(i < 8){
+											if(rays[j].intersection[0] == t){
+												colours.at(j).at(0) = 0.0;
+												colours.at(j).at(1) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
+												colours.at(j).at(2) = 0.0;
+											}
+										} else if(i < 10){
+											if(rays[j].intersection[0] == t){
+												colours.at(j).at(0) = 1.0*(0.5+(0.5*max(0.0f,dot))) + 0.5*1.0*pow(dot2,1000);
+												colours.at(j).at(1) = 0.0;
+												colours.at(j).at(2) = 0.0;
+											}
+										} else if(i < 12){
+											if(rays[j].intersection[0] == t){
+												colours.at(j).at(0) = 0.5*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.5*pow(dot2,1000);
+												colours.at(j).at(1) = 0.5*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.5*pow(dot2,1000);
+												colours.at(j).at(2) = 0.5*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.5*pow(dot2,1000);
+											}
+										} else if(i < 32){
+											if(rays[j].intersection[0] == t){
+												colours.at(j).at(0) = 0.7*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.7*pow(dot2,1000);
+												colours.at(j).at(1) = 0.7*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.7*pow(dot2,1000);
+												colours.at(j).at(2) = 0.0;
+										}
+									}
+								}
+
+
 								}
 							}
 						}
 
 					}
 				}
+			}
 
 				//plane intersection
+				cout << "planes" << endl;
+
+				ix = 0.0; iy = 0.0; iz = 0.0;
+				nix = 0.0; niy = 0.0; niz = 0.0;
+				hx = 0.0; hy = 0.0; hz = 0.0;
+
+				scale = 0.0;
+				dot = 0.0;
+				dot2 = 0.0;
+
 
 				t = 0.0;
 				for (int i = 0; i < planeCount; i++) {
@@ -535,22 +733,120 @@ int main(int argc, char *argv[])
 						t = ((planes.at(i).at(3) * planes.at(i).at(0)) + (planes.at(i).at(4) * planes.at(i).at(1)) + (planes.at(i).at(5) * planes.at(i).at(2)))/
 						((rays[j].direction[0] * planes.at(i).at(0)) + (rays[j].direction[1] * planes.at(i).at(1)) + (rays[j].direction[2] * planes.at(i).at(2)));
 
-						if (rays[j].intersection[0] == -1.0){
-							rays[j].intersection[0] = t;
-						} else if(rays[j].intersection[0] > t){
-							rays[j].intersection[0] = t;
+						scale = sqrt(pow(rays[j].direction[0],2) + pow(rays[j].direction[1],2) + pow(rays[j].direction[2],2)) - t;
+						ix = rays[j].direction[0] - scale; iy = rays[j].direction[1] - scale; iz = rays[j].direction[2] - scale;
+						ix = lights.at(0).at(0) - ix; iy = lights.at(0).at(1) - iy; iz = lights.at(0).at(2) - iz;
+
+						nix = ix/sqrt(pow(ix,2) + pow(iy,2) + pow(iz,2));
+						niy = iy/sqrt(pow(ix,2) + pow(iy,2) + pow(iz,2));
+						niz = iz/sqrt(pow(ix,2) + pow(iy,2) + pow(iz,2));
+
+						dot = -((planes.at(i).at(0) * nix) + (planes.at(i).at(1) * niy) + (planes.at(i).at(2) * niz));
+
+						hx = (lights.at(0).at(0))/sqrt(pow(lights.at(0).at(0),2) + pow(lights.at(0).at(1),2) + pow((lights.at(0).at(2)),2));
+						hy = (lights.at(0).at(1))/sqrt(pow(lights.at(0).at(0),2) + pow(lights.at(0).at(1),2) + pow((lights.at(0).at(2)),2));
+						hz = (lights.at(0).at(2))/sqrt(pow(lights.at(0).at(0),2) + pow(lights.at(0).at(1),2) + pow((lights.at(0).at(2)),2));
+
+						dot2 = -((planes.at(i).at(0) * hx) + (planes.at(i).at(1) * hy) + (planes.at(i).at(2) * hz));
+
+						if (scene == 1){
+							if (rays[j].intersection[0] == -1.0){
+								rays[j].intersection[0] = t;
+								rays[j].intersection[1] = ix;
+								rays[j].intersection[2] = iy;
+								rays[j].intersection[3] = iz;
+							} else if(rays[j].intersection[0] > t){
+								rays[j].intersection[0] = t;
+								rays[j].intersection[1] = ix;
+								rays[j].intersection[2] = iy;
+								rays[j].intersection[3] = iz;
+							}
+
+							if(rays[j].intersection[0] == t){
+								colours.at(j).at(0) = 0.7*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.7*pow(dot2,1000);
+								colours.at(j).at(1) = 0.7*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.7*pow(dot2,1000);
+								colours.at(j).at(2) = 0.7*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.7*pow(dot2,1000);
+							}
+
+						} else if(scene == 2){
+
+							if (rays[j].intersection[0] == -1.0){
+								rays[j].intersection[0] = t;
+								rays[j].intersection[1] = ix;
+								rays[j].intersection[2] = iy;
+								rays[j].intersection[3] = iz;
+							} else if(rays[j].intersection[0] > t){
+								//rays[j].intersection[0] = t;
+							}
+
+							if(rays[j].intersection[0] == t){
+								colours.at(j).at(0) = 0.7*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.7*pow(dot2,1000);
+								colours.at(j).at(1) = 0.7*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.7*pow(dot2,1000);
+								colours.at(j).at(2) = 0.7*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.7*pow(dot2,1000);
+							}
+						} else if(scene == 3) {
+							if (rays[j].intersection[0] == -1.0){
+								rays[j].intersection[0] = t;
+								rays[j].intersection[1] = ix;
+								rays[j].intersection[2] = iy;
+								rays[j].intersection[3] = iz;
+							} else if(rays[j].intersection[0] > t){
+								rays[j].intersection[0] = t;
+								rays[j].intersection[1] = ix;
+								rays[j].intersection[2] = iy;
+								rays[j].intersection[3] = iz;
+							}
+
+							if(rays[j].intersection[0] == t){
+								colours.at(j).at(0) = 0.0;
+								colours.at(j).at(1) = 0.0;
+								colours.at(j).at(2) = 0.7*(0.5+(0.5*max(0.0f,dot))) + 0.5*0.7*pow(dot2,1000);
+							}
+
 						}
 
-						if(rays[j].intersection[0] == t){
-							colours.at(j).at(0) = 0.7;
-							colours.at(j).at(1) = 0.7;
-							colours.at(j).at(2) = 0.7;
-						}
 					}
 				}
 
+				//shadows
+				cout << "shadows" << endl;
+				// attempt at evaluating shadow rays
+/*
+				float dista = 0.0; float distb = 0.0;
+
+				for (int i = 0; i < 409600; i++){
+					for (int j = 0; j < 409600; j++){
+						dista = sqrt(pow((rays[i].intersection[1] - rays[j].intersection[1]),2) + pow((rays[i].intersection[2] - rays[j].intersection[2]),2) + pow((rays[i].intersection[3] - rays[j].intersection[3]),2)) +
+						sqrt(pow((rays[j].intersection[1] - lights.at(0).at(0)),2) + pow((rays[j].intersection[2] - lights.at(0).at(1)),2) + pow((rays[j].intersection[3] - lights.at(0).at(2)),2));
+						distb = sqrt(pow((rays[i].intersection[1] - lights.at(0).at(0)),2) + pow((rays[i].intersection[2] - lights.at(0).at(1)),2) + pow((rays[i].intersection[3] - lights.at(0).at(2)),2));
+						if (dista == distb) {
+							if (colours.at(i).at(0) > 0.0) {colours.at(i).at(0) = 0.5;}
+							if (colours.at(i).at(1) > 0.0) {colours.at(i).at(1) = 0.5;}
+							if (colours.at(i).at(2) > 0.0) {colours.at(i).at(2) = 0.5;}
+							break;
+						}
+					}
+					std::cout << i << std::endl;
+					i = i + 1000;
+				}
+*/
+	//render
 				GeneratePoint(&geometry, &shader, vertices, colours);
 				RenderScene(&geometry, &shader);
+
+				int count = 0;
+				glm::vec3 colors= glm::vec3 (0.0f,0.0f,0.0f);
+				for (float i = 0; i < height; i++) {
+					for (float j = 0; j < width; j++) {
+						colors.x = colours.at(count).at(0);
+						colors.y = colours.at(count).at(1);
+						colors.z = colours.at(count).at(2);
+						Image.SetPixel(j, i, colors);
+						count++;
+					}
+				}
+
+		    Image.SaveToFile("image");
 
 		File.close();
 	}
@@ -560,6 +856,7 @@ int main(int argc, char *argv[])
 	DestroyShaders(&shader);
 	glfwDestroyWindow(window);
 	glfwTerminate();
+	Image.Destroy();
 
 	cout << "Goodbye!" << endl;
 	return 0;

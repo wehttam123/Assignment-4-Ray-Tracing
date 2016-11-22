@@ -41,22 +41,22 @@ plane {
   0 0 -12
 }
 
-# Large yellow sphere
 sphere {
-  1 -0.5 -3.5
-  0.5
+  7.5 -6.6 -4.69
+  0.465
 }
 
-# Reflective grey sphere
+# Reflective grey
+
 sphere {
-  0 1 -5
-  0.4
+  0.0 8.6 -4.69
+  0.515
 }
 
-# Metallic purple sphere
+# Metallic purple
 sphere {
-  -0.8 -0.75 -4
-  0.25
+  -6.5 -7.5 -4.69
+  0.415
 }
 
 # Green cone
